@@ -1,2 +1,2 @@
 # C-ReadWriteLock
-C#实现读写锁
+C#实现ReentrantReadWriteLock(读写锁)
