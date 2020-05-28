@@ -9,15 +9,20 @@ namespace ReentrantReadWriteLock
 {
     public class ReadWriteLock
     {
-        //管理队列
+        //调度管理队列
         private volatile Queue<Node> Sequence;
-        //重入量
+
+        //重入量分为读重入量、写重入量方便区分
         private volatile int writerReentrants;
         private volatile int readerReentrants;
+
         //持有锁的线程
         private volatile Thread holder;
+
         //队列尾元素
         private volatile Node rear;
+
+        //输出函数实现原子操作的object
         private static object obj = new object();
 
         public ReadWriteLock()
@@ -43,7 +48,7 @@ namespace ReentrantReadWriteLock
                 }
             }
             /*
-            ** 判断锁是否重入
+            ** 判断写锁是否重入
             */
             lock (this)
             {
@@ -54,6 +59,7 @@ namespace ReentrantReadWriteLock
                 }
                 else
                 {
+                    //其他线程可能在这段时间执行完成，因此需要再次判断队列节点个数
                     if (Sequence.Count == 0)
                     {
                         addRunningWriter();
@@ -89,29 +95,12 @@ namespace ReentrantReadWriteLock
             lock (this)
             {
                 writerReentrants -= 1;
+                //当写重入量为0时写线程出队列
                 if (writerReentrants == 0)
                 {
                     Sequence.Dequeue();
                     Console.WriteLine("写线程退出！");
                     Print();
-                    //释放后队列中还有其他任务
-                    /*
-                    if (Sequence.Count > 0)
-                    {
-                        Node header = Sequence.Peek();
-                        if (!header.getType())
-                        {
-                            holder = header.thread;
-                            //设置下一个节点状态
-                            header.Status = Node.RUNNING;
-                            reentrants = 1;
-                        }
-                    }
-                    else
-                    {
-                        holder = null;
-                    }
-                    */
                 }
             }
         }
@@ -140,7 +129,6 @@ namespace ReentrantReadWriteLock
             {
                 if (ReaderParallel())
                 {
-
                     addParallelReader();
                     return;
                 }
@@ -171,6 +159,7 @@ namespace ReentrantReadWriteLock
              */
              while (true)
             {
+                //读者位于队列队首时的情况
                 if (readNode == Sequence.Peek())
                 {
                     readNode.Status = Node.RUNNING;
@@ -180,6 +169,7 @@ namespace ReentrantReadWriteLock
                 }
                 else
                 {
+                    //读者前驱节点为读节点且前驱节点正在执行
                     Node preNode = readNode.pre;
                     if (preNode.Status == Node.RUNNING && !preNode.getType())
                     {
@@ -220,16 +210,19 @@ namespace ReentrantReadWriteLock
                             else
                             {
                                 //遇到第一个写者就说明运行的读者删除完了
-                                Print();
                                 break;
                             }
                         }
                     }
+                    Print();
                 }
             }
         }
 
-        //添加写者
+        /*
+         **添加写者
+         */
+         //添加直接运行的写者
         private void addRunningWriter()
         {
             Node node = new Node(Thread.CurrentThread, 1);
@@ -240,6 +233,7 @@ namespace ReentrantReadWriteLock
             Sequence.Enqueue(node);
         }
 
+        //添加等待的写者
         private Node addWaitingWriter()
         {
             Node node = new Node(Thread.CurrentThread, 1);
@@ -250,7 +244,10 @@ namespace ReentrantReadWriteLock
             return node;
         }
 
-        //添加读者
+        /*
+         **添加读者
+         */
+         //添加直接运行的读者
         private void addRunningReader()
         {
             Node node = new Node(Thread.CurrentThread, 0);
@@ -261,6 +258,7 @@ namespace ReentrantReadWriteLock
             Sequence.Enqueue(node);
         }
 
+        //添加并发运行的读者
         private void addParallelReader()
         {
             Node node = new Node(Thread.CurrentThread, 0);
@@ -272,6 +270,7 @@ namespace ReentrantReadWriteLock
             Sequence.Enqueue(node);
         }
 
+        //添加等待的读者
         private Node addWaitingReader()
         {
             
@@ -283,7 +282,9 @@ namespace ReentrantReadWriteLock
             return node;
         }
 
-        //判断读者是否可以并发执行
+        /*
+         **判断读者是否可以并发执行
+         */
         private bool ReaderParallel()
         {
             //队列中没有写者时可以并发,因为只要队列中有写者
@@ -295,7 +296,9 @@ namespace ReentrantReadWriteLock
             return false;
         }
 
-        //判断队列中是否有写者:false—没有;true—有
+        /*
+         **判断队列中是否有写者:false—没有;true—有
+         */
         private bool IsWriterExist()
         {
             if (Sequence.Count == 0)
@@ -313,6 +316,9 @@ namespace ReentrantReadWriteLock
             return false;
         }
 
+        /*
+         **打印队列情况
+         */
         public void Print()
         {
             lock (obj)
@@ -323,10 +329,10 @@ namespace ReentrantReadWriteLock
                 }
                 else
                 {
-                    //sConsole.WriteLine(Sequence.Peek().type);
+                    Console.WriteLine("此时队列中的线程:");
                     Node[] list = Sequence.ToArray();
                     int waitNode = 0;
-                    string sep = new string('-', 80);
+                    string sep = new string('-', 76);
                     for (int i = 0; i < list.Length; i++)
                     {
                         Node node = list[i];
@@ -334,11 +340,11 @@ namespace ReentrantReadWriteLock
                         {
                             if (node.getType())
                             {
-                                Console.WriteLine("Writer【持有线程ID = {0},运行状态STATUS = {1},重入量REENTRANT = {2}】", node.thread.ManagedThreadId, node.Status, writerReentrants);
+                                Console.WriteLine("Writer【持有线程ID = {0},运行状态STATUS = {1},重入量REENTRANT = {2}】", node.thread.ManagedThreadId, node.getStatus(node.Status), writerReentrants);
                             }
                             else
                             {
-                                Console.WriteLine("Reader【持有线程ID = {0},运行状态STATUS = {1},重入量REENTRANT = {2}】", node.thread.ManagedThreadId, node.Status, readerReentrants);
+                                Console.WriteLine("Reader【持有线程ID = {0},运行状态STATUS = {1},重入量REENTRANT = {2}】", node.thread.ManagedThreadId, node.getStatus(node.Status), readerReentrants);
                             }
                         }
                         else
@@ -350,7 +356,6 @@ namespace ReentrantReadWriteLock
                     Console.WriteLine(sep);
                 }
             }
-            
         }
     }
 }

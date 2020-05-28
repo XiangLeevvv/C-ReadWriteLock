@@ -13,13 +13,12 @@ namespace ReentrantReadWriteLock
         public Thread thread;
         //任务状态
         public int Status;
-        //前驱节点
+        //前驱节点在唤醒读节点的时候用到
         public Node pre;
 
         //节点状态
         public static readonly int RUNNING = 1;
         public static readonly int WAITING = -1;
-        public static readonly int READY = 0;
 
         //构造函数
         public Node(Thread thread, int type)
@@ -28,8 +27,8 @@ namespace ReentrantReadWriteLock
             this.thread = thread;
         }
 
-        //获取状态
-        public static string getStatus(int status)
+        //获取线程状态
+        public string getStatus(int status)
         {
             switch (status)
             {
@@ -37,12 +36,11 @@ namespace ReentrantReadWriteLock
                     return "RUNNING";
                 case -1:
                     return "WAITING";
-                case 0:
-                    return "READY";
             }
             return "DEFAULT";
         }
 
+        //获取线程类型返回一个bool类型:writer—>true,reader—>false
         public bool getType()
         {
             if (type == 1)

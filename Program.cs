@@ -36,18 +36,6 @@ namespace ReentrantReadWriteLock
             readWriteLock.WriteUnlock();
             readWriteLock.WriteUnlock();
         }
-        public static void testReentrantReader(ReadWriteLock readWriteLock)
-        {
-            readWriteLock.ReadLock();
-            readWriteLock.ReadLock();
-            readWriteLock.ReadLock();
-            readWriteLock.ReadLock();
-            Console.WriteLine("Test Reentrant Reader");
-            readWriteLock.ReadUnlock();
-            readWriteLock.ReadUnlock();
-            readWriteLock.ReadUnlock();
-            readWriteLock.ReadUnlock();
-        }
         public static void testWriter(ReadWriteLock readWriteLock)
         {
             readWriteLock.WriteLock();
@@ -64,8 +52,10 @@ namespace ReentrantReadWriteLock
         {
             Console.WriteLine("Hello World!");
             ReadWriteLock readWriteLock = new ReadWriteLock();
-            Mutex mutex = new Mutex();
-            
+
+            testReentrantWriter(readWriteLock);
+            Console.WriteLine();
+            Console.WriteLine("测试多读者、写者并发:  (每次在有线程退出时打印当前队列中的运行、等待的线程)");
             
             for (int i = 0; i < 30; i++)
             {
@@ -82,28 +72,6 @@ namespace ReentrantReadWriteLock
                 }
                 thread.Start();
             }
-            
-            
-            /*
-            for (int i = 0; i < 10; i++)
-            {
-                Thread thread = new Thread(() => testWriter(readWriteLock));
-                thread.Start();
-            }
-            for (int i = 0; i < 20; i++)
-            {
-                Thread thread = new Thread(() => testReader(readWriteLock));
-                thread.Start();
-            }
-            */
-            
-            /*
-            for (int i = 0; i < 30; i++)
-            {
-                readWriteLock.Print();
-            }
-            */
-
         }
     }
 }
